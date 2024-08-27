@@ -1,0 +1,153 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><link rel="icon" href="data:">
+<title>image grid layouter</title>
+</head><body>
+
+<h1>image grid layouter</h1>
+
+<select id=selpaper></select><br>
+<select id=seldpi></select><br>
+<select id=selx></select>x<select id=sely></select><br>
+<div id=divfiles></div><br>
+<label><input type=radio name=radiovh id=radiov checked>vertical (縦)</label>
+<label><input type=radio name=radiovh id=radioh>horizontal (横)</label><br>
+<button id=btnmake>make!</button>
+
+<style>
+#divfiles {
+  margin: 1em;
+  padding: .3em;
+  border: 2px solid black;
+  box-shadow: 2px 2px 2px gray;
+}
+#divfiles > div {
+  border: 1px solid black;
+  padding: 1em;
+  margin: .1em;
+}
+#divfiles > div > img {
+  width: 100%;
+}
+</style>
+
+<script type="module">
+import { setDropFilesListener } from "https://js.sabae.cc/setDropFilesListener.js";
+import { waitFileRead } from "https://js.sabae.cc/waitFileRead.js";
+import { encodeData } from "https://code4fukui.github.io/dataencoder/encodeData.js";
+
+import { PNG } from "https://code4fukui.github.io/PNG/PNG.js";
+import { downloadZip } from "https://code4sabae.github.io/js/downloadZip.js";
+//import { downloadTextFile } from "https://code4sabae.github.io/js/downloadTextFile.js";
+import { downloadFile } from "https://code4sabae.github.io/js/downloadFile.js";
+import { CSV } from "https://code4fukui.github.io/CSV/CSV.js";
+import { cr } from "https://js.sabae.cc/cr.js";
+
+const defaultpaper = "B6";
+const papers = await CSV.fetchJSON("./papersize.csv");
+for (const p of papers) {
+  const opt = cr("option", selpaper);
+  opt.value = p.width + "x" + p.height;
+  opt.textContent = p.name + " (" + opt.value + ")";
+  if (p.name == defaultpaper) opt.selected = true;
+}
+
+const dpis = [72, 150, 300];
+for (const dpi of dpis) {
+  const opt = cr("option", seldpi);
+  opt.textContent = dpi;
+}
+seldpi.value = 300;
+
+for (let i = 1; i <= 4; i++) {
+  const optx = cr("option", selx);
+  const opty = cr("option", sely);
+  optx.textContent = opty.textContent = i;
+}
+selx.value = 4;
+sely.value = 2;
+
+selx.onchange = sely.onchange = () => {
+  const nx = parseInt(selx.value);
+  const ny = parseInt(sely.value);
+  divfiles.innerHTML = "";
+  divfiles.style.display = "inline-grid";
+  divfiles.style.gridTemplateColumns = "1fr ".repeat(nx);
+  divfiles.style.gridTemplateRows = "1fr ".repeat(ny);
+  for (let i = 0; i < nx * ny; i++) {
+    const div = cr("div", divfiles);
+    div.textContent = "drop here";
+    setDropFilesListener(div, async (files) => {
+      const f = files[0];
+      console.log(f);
+      const ext = f.file.name.toLowerCase();
+      if (!ext.endsWith(".jpg") && !ext.endsWith(".jpeg")) {
+        alert("this file is not JPEG file");
+        return;
+      }
+      const bin = await waitFileRead(f.file);
+      const img = new Image();
+      img.src = encodeData("image/jpeg", bin);
+      div.innerHTML = "";
+      div.appendChild(img);
+    });
+  }
+};
+selx.onchange();
+
+const drawImageFit = (g, img, x, y, w, h) => {
+  const iw = img.naturalWidth;
+  const ih = img.naturalHeight;
+  if (iw / ih > w / h) {
+    const iw2 = w;
+    const ih2 = ih / iw * w;
+    const offy = (h - ih2) / 2;
+    g.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, x, y + offy, iw2, ih2);
+  } else {
+    const ih2 = h;
+    const iw2 = iw / ih * h;
+    const offx = (w - iw2) / 2;
+    g.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, x + offx, y, iw2, ih2);
+  }
+};
+
+btnmake.onclick = () => {
+  const canvas = cr("canvas");
+  const size = selpaper.value.split("x");
+  const dpi = parseInt(seldpi.value);
+  const dpmm = dpi / 25.4;
+  const sizex = radiov.checked ? size[0] : size[1];
+  const sizey = radiov.checked ? size[1] : size[0];
+  const w = canvas.width = Math.floor(dpmm * sizex);
+  const h = canvas.height = Math.floor(dpmm * sizey);
+  console.log(w, h);
+  const g = canvas.getContext("2d");
+  g.fillStyle = "white";
+  g.fillRect(0, 0, w, h);
+
+  const nx = parseInt(selx.value);
+  const ny = parseInt(sely.value);
+  const iw = w / nx;
+  const ih = h / ny;
+  for (let i = 0; i < ny; i++) {
+    const y = h / ny * i;
+    for (let j = 0; j < nx; j++) {
+      const x = w / nx * j;
+      const img = divfiles.children[i * nx + j].children[0];
+      if (!img || img.tagName != "IMG") continue;
+      drawImageFit(g, img, x, y, iw, ih);
+    }
+  }
+  const dataURL = canvas.toDataURL('image/jpeg');
+  const link = cr("a");
+  link.href = dataURL;
+  link.download = "grid-layout.jpg";
+  link.click();
+};
+</script>
+
+<footer>
+  <hr>
+  <p><a href=https://github.com/code4fukui/img-grid-layouter>src on GitHub</a></p>
+</footer>
+
+</body>
+</html>
