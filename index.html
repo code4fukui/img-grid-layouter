@@ -33,13 +33,9 @@
 import { setDropFilesListener } from "https://js.sabae.cc/setDropFilesListener.js";
 import { waitFileRead } from "https://js.sabae.cc/waitFileRead.js";
 import { encodeData } from "https://code4fukui.github.io/dataencoder/encodeData.js";
-
-import { PNG } from "https://code4fukui.github.io/PNG/PNG.js";
-import { downloadZip } from "https://code4sabae.github.io/js/downloadZip.js";
-//import { downloadTextFile } from "https://code4sabae.github.io/js/downloadTextFile.js";
-import { downloadFile } from "https://code4sabae.github.io/js/downloadFile.js";
 import { CSV } from "https://code4fukui.github.io/CSV/CSV.js";
 import { cr } from "https://js.sabae.cc/cr.js";
+import { drawImageFit } from "./drawImageFit.js";
 
 const defaultpaper = "B6";
 const papers = await CSV.fetchJSON("./papersize.csv");
@@ -92,22 +88,6 @@ selx.onchange = sely.onchange = () => {
   }
 };
 selx.onchange();
-
-const drawImageFit = (g, img, x, y, w, h) => {
-  const iw = img.naturalWidth;
-  const ih = img.naturalHeight;
-  if (iw / ih > w / h) {
-    const iw2 = w;
-    const ih2 = ih / iw * w;
-    const offy = (h - ih2) / 2;
-    g.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, x, y + offy, iw2, ih2);
-  } else {
-    const ih2 = h;
-    const iw2 = iw / ih * h;
-    const offx = (w - iw2) / 2;
-    g.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, x + offx, y, iw2, ih2);
-  }
-};
 
 btnmake.onclick = () => {
   const canvas = cr("canvas");
